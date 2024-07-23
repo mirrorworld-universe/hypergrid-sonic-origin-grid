@@ -29,8 +29,8 @@ RAM: 512GB
 SSD: 15TB  
 
 ### Server Port Policy
-Open ports 80 and 443 to support RPC external services.  
-Open TCP and UDP protocol ports in the range of 8000 to 9000, and whitelist the IP addresses 52.10.174.63 and 35.164.22.3.  
+Open ports `80` and `443` to support RPC external services.  
+Open TCP and UDP protocol ports in the range of `8000` to `9000`, and whitelist the IP addresses `52.10.174.63` and `35.164.22.3`.  
 After completing the above configurations, please send your server's public IP address to operators@sonic.game.
 
 ### System Tuning
