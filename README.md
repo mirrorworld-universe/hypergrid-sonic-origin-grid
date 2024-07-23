@@ -11,17 +11,17 @@
 
 
 
-# Sonic HyperGrid Node Setup Guide
+# Sonic Devnet HyperGrid Node Setup Guide
 
 
 
 
 
-## Sonic HyperGrid Operating System Requirements
+### HyperGrid Operating System Requirements
 Ubuntu Server 22.04.4 LTS
 
 
-## Sonic HyperGrid Hardware Requirements
+### HyperGrid Hardware Requirements
 Low-End Configuration:
 CPU: 64-core
 RAM: 256GB
@@ -32,27 +32,27 @@ CPU: 128-core
 RAM: 512GB
 SSD: 15TB
 
-## Server Port Policy
+### Server Port Policy
 Open ports 80 and 443 to support RPC external services.
 Open TCP and UDP protocol ports in the range of 8000 to 9000, and whitelist the IP addresses 52.10.174.63 and 35.164.22.3.
 
 After completing the above configurations, please send your server's public IP address to operators@sonic.game.
 
-## System Tuning
+### System Tuning
 Your system will need to be tuned in order to run properly. Your validator may not start without the settings below.
 Optimize sysctl knobs​
 
 sudo bash -c "cat >/etc/sysctl.d/21-solana-validator.conf <<EOF
-### Increase UDP buffer sizes
+#### Increase UDP buffer sizes
 net.core.rmem_default = 134217728
 net.core.rmem_max = 134217728
 net.core.wmem_default = 134217728
 net.core.wmem_max = 134217728
 
-### Increase memory mapped files limit
+#### Increase memory mapped files limit
 vm.max_map_count = 1000000
 
-### Increase number of allowed open file descriptors
+#### Increase number of allowed open file descriptors
 fs.nr_open = 1000000
 EOF"
 sudo sysctl -p /etc/sysctl.d/21-solana-validator.conf
@@ -74,7 +74,7 @@ sudo systemctl daemon-reload
 
 
 sudo bash -c "cat >/etc/security/limits.d/90-solana-nofiles.conf <<EOF
-### Increase process file descriptor count limit
+#### Increase process file descriptor count limit
 * - nofile 1000000
 EOF"
 
