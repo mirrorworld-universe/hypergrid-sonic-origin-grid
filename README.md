@@ -85,7 +85,7 @@ $ wget https://grid-sonic.hypergrid.dev/downloads/hypergrid-rpcnode.tar.gz
 $ tar -zxvf hypergrid-rpcnode.tar.gz
 ```
 
-1.2 Building program from source codes
+1.2 Building program from source codes。  
 1). Install rustc, cargo and rustfmt.
 ```
 $ curl https://sh.rustup.rs -sSf | sh
