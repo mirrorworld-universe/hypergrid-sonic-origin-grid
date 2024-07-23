@@ -12,7 +12,7 @@ export RUST_BACKTRACE=full
 	--only-known-rpc \
 	--gossip-host 172.31.11.97 \
 	--gossip-port 8001 \
-    --entrypoint 172.31.6.206:8001 \
+    --entrypoint 52.10.174.63:8001 \
 	--public-rpc-address 172.31.11.97:8899 \
 	--enable-rpc-transaction-history \
 	--enable-extended-tx-metadata-storage \
