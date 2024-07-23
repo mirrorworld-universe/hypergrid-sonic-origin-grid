@@ -1,147 +1,157 @@
-<p align="center">
-  <a href="https://solana.com">
-    <img alt="Solana" src="https://i.imgur.com/IKyzQ6T.png" width="250" />
-  </a>
-</p>
+Sonic HyperGrid Node Setup Guide
 
-[![Solana crate](https://img.shields.io/crates/v/solana-core.svg)](https://crates.io/crates/solana-core)
-[![Solana documentation](https://docs.rs/solana-core/badge.svg)](https://docs.rs/solana-core)
-[![Build status](https://badge.buildkite.com/8cc350de251d61483db98bdfc895b9ea0ac8ffa4a32ee850ed.svg?branch=master)](https://buildkite.com/solana-labs/solana/builds?branch=master)
-[![codecov](https://codecov.io/gh/solana-labs/solana/branch/master/graph/badge.svg)](https://codecov.io/gh/solana-labs/solana)
 
-# Building
+Sonic HyperGrid Operating System Requirements
 
-## **1. Install rustc, cargo and rustfmt.**
+Ubuntu Server 22.04.4 LTS
 
-```bash
+​
+
+Sonic HyperGrid Hardware Requirements
+
+Low-End Configuration:
+CPU: 64-core
+RAM: 256GB
+SSD: 10TB
+
+Mid-Range Configuration:
+CPU: 128-core
+RAM: 512GB
+SSD: 15TB
+
+Server Port Policy
+Open ports 80 and 443 to support RPC external services.
+Open TCP and UDP protocol ports in the range of 8000 to 9000, and whitelist the IP addresses 52.10.174.63 and 35.164.22.3.
+
+After completing the above configurations, please send your server's public IP address to operators@sonic.game.
+
+System Tuning
+Your system will need to be tuned in order to run properly. Your validator may not start without the settings below.
+Optimize sysctl knobs​
+
+sudo bash -c "cat >/etc/sysctl.d/21-solana-validator.conf <<EOF
+# Increase UDP buffer sizes
+net.core.rmem_default = 134217728
+net.core.rmem_max = 134217728
+net.core.wmem_default = 134217728
+net.core.wmem_max = 134217728
+
+# Increase memory mapped files limit
+vm.max_map_count = 1000000
+
+# Increase number of allowed open file descriptors
+fs.nr_open = 1000000
+EOF"
+sudo sysctl -p /etc/sysctl.d/21-solana-validator.conf
+
+Increase systemd and session file limits​
+Add
+
+LimitNOFILE=1000000
+
+to the [Service] section of your systemd service file, if you use one, otherwise add
+
+DefaultLimitNOFILE=1000000
+
+
+
+to the [Manager] section of /etc/systemd/system.conf.
+
+sudo systemctl daemon-reload
+
+
+sudo bash -c "cat >/etc/security/limits.d/90-solana-nofiles.conf <<EOF
+# Increase process file descriptor count limit
+* - nofile 1000000
+EOF"
+
+
+### Close all open sessions (log out then, in again) ###
+
+
+Install Sonic Devnet Validator
+1. Install Sonic devnet program
+You can install a pre-built binary package, or build it from source codes.
+
+1.1 Download and Extract the Installation Package
+
+$ wget https://grid-sonic.hypergrid.dev/downloads/hypergrid-rpcnode.tar.gz
+$ tar -zxvf hypergrid-rpcnode.tar.gz
+
+
+1.2 Building program from source codes
+1). Install rustc, cargo and rustfmt.
+
 $ curl https://sh.rustup.rs -sSf | sh
 $ source $HOME/.cargo/env
 $ rustup component add rustfmt
-```
 
-When building the master branch, please make sure you are using the latest stable rust version by running:
+On Ubuntu you may need to install libssl-dev, pkg-config, zlib1g-dev, protobuf etc.
 
-```bash
-$ rustup update
-```
-
-When building a specific release branch, you should check the rust version in `ci/rust-version.sh` and if necessary, install that version by running:
-```bash
-$ rustup install VERSION
-```
-Note that if this is not the latest rust version on your machine, cargo commands may require an [override](https://rust-lang.github.io/rustup/overrides.html) in order to use the correct version.
-
-On Linux systems you may need to install libssl-dev, pkg-config, zlib1g-dev, protobuf etc.
-
-On Ubuntu:
-```bash
 $ sudo apt-get update
 $ sudo apt-get install libssl-dev libudev-dev pkg-config zlib1g-dev llvm clang cmake make libprotobuf-dev protobuf-compiler
-```
 
-On Fedora:
-```bash
-$ sudo dnf install openssl-devel systemd-devel pkg-config zlib-devel llvm clang cmake make protobuf-devel protobuf-compiler perl-core
-```
+2). Download the source code.
 
-## **2. Download the source code.**
+$ git clone https://github.com/mirrorworld-universe/hypergrid-sonic-origin-grid
+$ cd hypergrid-sonic-origin-grid
 
-```bash
-$ git clone https://github.com/solana-labs/solana.git
-$ cd solana
-```
 
-## **3. Build.**
+3). Build.
 
-```bash
-$ ./cargo build
-```
+$ mkdir ~/grid_node
+$ ./scripts/cargo-install-all.sh ~/grid_node
+$ cp ./run_rpcnode.sh ~/grid_node/
 
-# Testing
 
-**Run the test suite:**
+2. Initialization
 
-```bash
-$ ./cargo test
-```
+$ cd ~/grid_node
+$ mkdir config
+$ mkdir logs
+$ ./bin/solana-keygen new --no-passphrase
+$ ./bin/solana config set --url http://127.0.0.1:8899
+$ ./bin/solana-keygen new -o ./config/validator-keypair.json
 
-### Starting a local testnet
 
-Start your own testnet locally, instructions are in the [online docs](https://docs.solanalabs.com/clusters/benchmark).
 
-### Accessing the remote development cluster
+3. Modify Configuration
+Edit the run_rpcnode.sh file to replace the IP address (172.31.61.43) with your machine's public IP address.
+./bin/solana-validator \
+    --identity ./config/validator-keypair.json \
+    --known-validator CQqu5MsTpH1mTwEsZ75QzPtXGTz9ziEvKwpcAstKG9WJ \
+    --ledger ./ledger \
+    --rpc-port 8899 \
+    --full-rpc-api \
+    --no-voting \
+    --rpc-bind-address 0.0.0.0 \
+    --only-known-rpc \
+    --gossip-host 172.31.61.43 \
+    --gossip-port 8001 \
+    --entrypoi:8001 \
+    --public-rpc-address 172.31.61.43:8899 \
+    --enable-rpc-transaction-history \
+    --enable-extended-tx-metadata-storage \
+    --no-wait-for-vote-to-start-leader \
+    --no-os-network-limits-test \
+    --rpc-pubsub-enable-block-subscription \
+    --rpc-pubsub-enable-vote-subscription \
+    --account-index program-id \
+    --account-index spl-token-owner \
+    --account-index spl-token-mint \
+    --accounts-db-cache-limit-mb 102400 \
+    --accounts-index-memory-limit-mb 40960 \
+    --accounts-index-scan-results-limit-mb 40960 \
+    --limit-ledger-size 300000000 \
+    --expected-genesis-hash BsJstMXKW4DpjzHPsSCdEcAn4YtpNiLFRFa5M5L7UxFx \
+    --wal-recovery-mode skip_any_corrupted_record \
+    --log ./logs/validator.log &
 
-* `devnet` - stable public cluster for development accessible via
-devnet.solana.com. Runs 24/7. Learn more about the [public clusters](https://docs.solanalabs.com/clusters)
 
-# Benchmarking
 
-First, install the nightly build of rustc. `cargo bench` requires the use of the
-unstable features only available in the nightly build.
 
-```bash
-$ rustup install nightly
-```
+4. Run
 
-Run the benchmarks:
+$ ./run_rpcnode.sh
 
-```bash
-$ cargo +nightly bench
-```
 
-# Release Process
-
-The release process for this project is described [here](RELEASE.md).
-
-# Code coverage
-
-To generate code coverage statistics:
-
-```bash
-$ scripts/coverage.sh
-$ open target/cov/lcov-local/index.html
-```
-
-Why coverage? While most see coverage as a code quality metric, we see it primarily as a developer
-productivity metric. When a developer makes a change to the codebase, presumably it's a *solution* to
-some problem.  Our unit-test suite is how we encode the set of *problems* the codebase solves. Running
-the test suite should indicate that your change didn't *infringe* on anyone else's solutions. Adding a
-test *protects* your solution from future changes. Say you don't understand why a line of code exists,
-try deleting it and running the unit-tests. The nearest test failure should tell you what problem
-was solved by that code. If no test fails, go ahead and submit a Pull Request that asks, "what
-problem is solved by this code?" On the other hand, if a test does fail and you can think of a
-better way to solve the same problem, a Pull Request with your solution would most certainly be
-welcome! Likewise, if rewriting a test can better communicate what code it's protecting, please
-send us that patch!
-
-# Disclaimer
-
-All claims, content, designs, algorithms, estimates, roadmaps,
-specifications, and performance measurements described in this project
-are done with the Solana Labs, Inc. (“SL”) good faith efforts. It is up to
-the reader to check and validate their accuracy and truthfulness.
-Furthermore, nothing in this project constitutes a solicitation for
-investment.
-
-Any content produced by SL or developer resources that SL provides are
-for educational and inspirational purposes only. SL does not encourage,
-induce or sanction the deployment, integration or use of any such
-applications (including the code comprising the Solana blockchain
-protocol) in violation of applicable laws or regulations and hereby
-prohibits any such deployment, integration or use. This includes the use of
-any such applications by the reader (a) in violation of export control
-or sanctions laws of the United States or any other applicable
-jurisdiction, (b) if the reader is located in or ordinarily resident in
-a country or territory subject to comprehensive sanctions administered
-by the U.S. Office of Foreign Assets Control (OFAC), or (c) if the
-reader is or is working on behalf of a Specially Designated National
-(SDN) or a person subject to similar blocking or denied party
-prohibitions.
-
-The reader should be aware that U.S. export control and sanctions laws prohibit 
-U.S. persons (and other persons that are subject to such laws) from transacting 
-with persons in certain countries and territories or that are on the SDN list. 
-Accordingly, there is a risk to individuals that other persons using any of the 
-code contained in this repo, or a derivation thereof, may be sanctioned persons 
-and that transactions with such persons would be a violation of U.S. export 
-controls and sanctions law.
