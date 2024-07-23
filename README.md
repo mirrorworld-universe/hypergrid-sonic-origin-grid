@@ -35,7 +35,7 @@ After completing the above configurations, please send your server's public IP a
 
 ### System Tuning
 Your system will need to be tuned in order to run properly. Your validator may not start without the settings below.  
-Optimize sysctl knobs​  
+#### Optimize sysctl knobs​  
 ```
 sudo bash -c "cat >/etc/sysctl.d/21-solana-validator.conf <<EOF
 # Increase UDP buffer sizes
