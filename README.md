@@ -75,54 +75,55 @@ EOF"
 ### Close all open sessions (log out then, in again) ###
 ```
 
-Install Sonic Devnet Validator
-1. Install Sonic devnet program
+### Install Sonic Devnet Validator
+#### 1. Install Sonic devnet program
 You can install a pre-built binary package, or build it from source codes.
 
 1.1 Download and Extract the Installation Package
-
+```
 $ wget https://grid-sonic.hypergrid.dev/downloads/hypergrid-rpcnode.tar.gz
 $ tar -zxvf hypergrid-rpcnode.tar.gz
-
+```
 
 1.2 Building program from source codes
 1). Install rustc, cargo and rustfmt.
-
+```
 $ curl https://sh.rustup.rs -sSf | sh
 $ source $HOME/.cargo/env
 $ rustup component add rustfmt
-
+```
 On Ubuntu you may need to install libssl-dev, pkg-config, zlib1g-dev, protobuf etc.
-
+```
 $ sudo apt-get update
 $ sudo apt-get install libssl-dev libudev-dev pkg-config zlib1g-dev llvm clang cmake make libprotobuf-dev protobuf-compiler
-
+```  
 2). Download the source code.
-
+```
 $ git clone https://github.com/mirrorworld-universe/hypergrid-sonic-origin-grid
 $ cd hypergrid-sonic-origin-grid
-
+```
 
 3). Build.
-
+```
 $ mkdir ~/grid_node
 $ ./scripts/cargo-install-all.sh ~/grid_node
 $ cp ./run_rpcnode.sh ~/grid_node/
+```
 
-
-2. Initialization
-
+#### 2. Initialization
+```
 $ cd ~/grid_node
 $ mkdir config
 $ mkdir logs
 $ ./bin/solana-keygen new --no-passphrase
 $ ./bin/solana config set --url http://127.0.0.1:8899
 $ ./bin/solana-keygen new -o ./config/validator-keypair.json
+```
 
 
-
-3. Modify Configuration
-Edit the run_rpcnode.sh file to replace the IP address (172.31.61.43) with your machine's public IP address.
+#### 3. Modify Configuration
+Edit the run_rpcnode.sh file to replace the IP address (172.31.61.43) with your machine's public IP address.  
+```
 ./bin/solana-validator \
     --identity ./config/validator-keypair.json \
     --known-validator CQqu5MsTpH1mTwEsZ75QzPtXGTz9ziEvKwpcAstKG9WJ \
@@ -152,12 +153,10 @@ Edit the run_rpcnode.sh file to replace the IP address (172.31.61.43) with your 
     --expected-genesis-hash BsJstMXKW4DpjzHPsSCdEcAn4YtpNiLFRFa5M5L7UxFx \
     --wal-recovery-mode skip_any_corrupted_record \
     --log ./logs/validator.log &
+```
 
-
-
-
-4. Run
-
+#### 4. Run
+```
 $ ./run_rpcnode.sh
-
+```
 
