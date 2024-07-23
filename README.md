@@ -29,14 +29,14 @@ RAM: 512GB
 SSD: 15TB  
 
 ### Server Port Policy
-Open ports 80 and 443 to support RPC external services.
+Open ports 80 and 443 to support RPC external services.  
 Open TCP and UDP protocol ports in the range of 8000 to 9000, and whitelist the IP addresses 52.10.174.63 and 35.164.22.3.  
 After completing the above configurations, please send your server's public IP address to operators@sonic.game.
 
 ### System Tuning
 Your system will need to be tuned in order to run properly. Your validator may not start without the settings below.  
 Optimize sysctl knobs​  
-
+```
 sudo bash -c "cat >/etc/sysctl.d/21-solana-validator.conf <<EOF
 #### Increase UDP buffer sizes
 net.core.rmem_default = 134217728
@@ -51,7 +51,7 @@ vm.max_map_count = 1000000
 fs.nr_open = 1000000
 EOF"
 sudo sysctl -p /etc/sysctl.d/21-solana-validator.conf
-
+```
 Increase systemd and session file limits​
 Add
 
