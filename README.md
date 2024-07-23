@@ -52,30 +52,28 @@ fs.nr_open = 1000000
 EOF"
 sudo sysctl -p /etc/sysctl.d/21-solana-validator.conf
 ```
-Increase systemd and session file limits​
+#### Increase systemd and session file limits​
 Add
-
+```
 LimitNOFILE=1000000
-
+```
 to the [Service] section of your systemd service file, if you use one, otherwise add
-
+```
 DefaultLimitNOFILE=1000000
-
-
-
+```
 to the [Manager] section of /etc/systemd/system.conf.
-
+```
 sudo systemctl daemon-reload
-
-
+```
+```
 sudo bash -c "cat >/etc/security/limits.d/90-solana-nofiles.conf <<EOF
 #### Increase process file descriptor count limit
 * - nofile 1000000
 EOF"
-
-
+```
+```
 ### Close all open sessions (log out then, in again) ###
-
+```
 
 Install Sonic Devnet Validator
 1. Install Sonic devnet program
