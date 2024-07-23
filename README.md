@@ -122,7 +122,7 @@ $ ./bin/solana-keygen new -o ./config/validator-keypair.json
 
 
 #### 3. Modify Configuration
-Edit the run_rpcnode.sh file to replace the IP address (172.31.61.43) with your machine's public IP address.  
+Edit the `run_rpcnode.sh` file to replace the IP address (`172.31.61.43`) with your machine's public IP address.  
 ```
 ./bin/solana-validator \
     --identity ./config/validator-keypair.json \
