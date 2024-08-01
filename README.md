@@ -107,7 +107,8 @@ $ cd hypergrid-sonic-origin-grid
 ```
 $ mkdir ~/grid_node
 $ ./scripts/cargo-install-all.sh ~/grid_node
-$ cp ./run_rpcnode.sh ~/grid_node/
+$ cp ./start_node.sh ~/grid_node/
+$ cp ./stop_node.sh ~/grid_node/
 ```
 
 #### 2. Initialization
@@ -122,41 +123,50 @@ $ ./bin/solana-keygen new -o ./config/validator-keypair.json
 
 
 #### 3. Modify Configuration
-Edit the `run_rpcnode.sh` file to replace the IP address (`172.31.61.43`) with your machine's public IP address.  
+Edit the `start_node.sh` file to replace the IP address (`xxx.xxx.xxx.xxx`) with your machine's public IP address.  
 ```
+export RUST_LOG=${RUST_LOG:-solana=info,solana_runtime::message_processor=info,solana_metrics::metrics=warn}
+export RUST_BACKTRACE=full
+
 ./bin/solana-validator \
-    --identity ./config/validator-keypair.json \
-    --known-validator CQqu5MsTpH1mTwEsZ75QzPtXGTz9ziEvKwpcAstKG9WJ \
-    --ledger ./ledger \
-    --rpc-port 8899 \
-    --full-rpc-api \
-    --no-voting \
-    --rpc-bind-address 0.0.0.0 \
-    --only-known-rpc \
-    --gossip-host 172.31.61.43 \
-    --gossip-port 8001 \
-    --entrypoint 52.10.174.63:8001 \
-    --public-rpc-address 172.31.61.43:8899 \
-    --enable-rpc-transaction-history \
-    --enable-extended-tx-metadata-storage \
-    --no-wait-for-vote-to-start-leader \
-    --no-os-network-limits-test \
-    --rpc-pubsub-enable-block-subscription \
-    --rpc-pubsub-enable-vote-subscription \
-    --account-index program-id \
-    --account-index spl-token-owner \
-    --account-index spl-token-mint \
-    --accounts-db-cache-limit-mb 102400 \
-    --accounts-index-memory-limit-mb 40960 \
-    --accounts-index-scan-results-limit-mb 40960 \
-    --limit-ledger-size 300000000 \
-    --expected-genesis-hash BsJstMXKW4DpjzHPsSCdEcAn4YtpNiLFRFa5M5L7UxFx \
-    --wal-recovery-mode skip_any_corrupted_record \
-    --log ./logs/validator.log &
+  --identity ./config/validator-keypair.json \
+  --known-validator CQqu5MsTpH1mTwEsZ75QzPtXGTz9ziEvKwpcAstKG9WJ \
+  --ledger ./ledger \
+	--no-voting \
+  --rpc-port 8899 \
+  --full-rpc-api \
+  --rpc-bind-address 0.0.0.0 \
+	--only-known-rpc \
+	--gossip-host xxx.xxx.xxx.xxx \
+	--gossip-port 8001 \
+  --entrypoint 52.10.174.63:8001 \
+	--public-rpc-address xxx.xxx.xxx.xxx:8899 \
+	--enable-rpc-transaction-history \
+	--enable-extended-tx-metadata-storage \
+	--no-wait-for-vote-to-start-leader \
+	--no-os-network-limits-test \
+  --wal-recovery-mode skip_any_corrupted_record \
+	--rpc-pubsub-enable-block-subscription \
+	--rpc-pubsub-enable-vote-subscription \
+	--account-index program-id \
+	--account-index spl-token-owner \
+	--account-index spl-token-mint \
+	--rpc-threads 128 \
+	--accounts-db-cache-limit-mb 102400 \
+	--accounts-index-memory-limit-mb 40960 \
+	--accounts-index-scan-results-limit-mb 40960 \
+	--limit-ledger-size 300000000 \
+  --expected-genesis-hash BsJstMXKW4DpjzHPsSCdEcAn4YtpNiLFRFa5M5L7UxFx \
+	--log ./logs/validator.log &
 ```
 
-#### 4. Run
+#### 4. Run the node
 ```
-$ ./run_rpcnode.sh
+$ ./start_node.sh
+```
+
+#### 5. Stop the node
+```
+$ ./stop_node.sh
 ```
 
