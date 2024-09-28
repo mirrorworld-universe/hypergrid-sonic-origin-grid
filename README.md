@@ -101,6 +101,7 @@ $ sudo apt-get install libssl-dev libudev-dev pkg-config zlib1g-dev llvm clang c
 ```
 $ git clone https://github.com/mirrorworld-universe/hypergrid-sonic-origin-grid
 $ cd hypergrid-sonic-origin-grid
+$ git checkout base_on_1.18.23
 ```
 
 3). Build.
