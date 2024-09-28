@@ -166,6 +166,7 @@ pub struct RpcProgramAccountsConfig {
     pub with_context: Option<bool>,
 }
 
+//Sonic: added
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RpcWalletCountConfig {

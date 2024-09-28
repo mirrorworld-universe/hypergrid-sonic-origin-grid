@@ -88,7 +88,7 @@ impl FeeStructure {
         let congestion_multiplier = if lamports_per_signature == 0 {
             0.0 // test only
         } else {
-            //1.0 // multiplier that has no effect
+            // 1.0 // multiplier that has no effect
             0.5 //Sonic: reduce the fee by half
         };
 

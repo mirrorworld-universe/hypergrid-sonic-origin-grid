@@ -1144,7 +1144,7 @@ impl Blockstore {
                 slot,
                 erasure_meta
                     .first_received_coding_shred_index()
-                    .expect("First received coding index must exist for all erasure metas"),
+                    .expect("First received coding index must fit in u32"),
                 ShredType::Code,
             );
             let shred = just_inserted_shreds
@@ -1800,12 +1800,17 @@ impl Blockstore {
                 merkle_root_meta.first_received_shred_index(),
                 merkle_root_meta.first_received_shred_type(),
             );
-            let conflicting_shred = self
+            let Some(conflicting_shred) = self
                 .get_shred_from_just_inserted_or_db(just_inserted_shreds, shred_id)
-                .unwrap_or_else(|| {
-                    panic!("First received shred indicated by merkle root meta {:?} is missing from blockstore. This inconsistency may cause duplicate block detection to fail", merkle_root_meta);
-                })
-                .into_owned();
+                .map(Cow::into_owned)
+            else {
+                error!(
+                    "Shred {shred_id:?} indiciated by merkle root meta {merkle_root_meta:?} is missing from blockstore.
+                    This should only happen in extreme cases where blockstore cleanup has caught up to the root.
+                    Skipping the merkle root consistency check"
+                );
+                return true;
+            };
             duplicate_shreds.push(PossibleDuplicateShred::MerkleRootConflict(
                 shred.clone(),
                 conflicting_shred,
@@ -1859,10 +1864,17 @@ impl Blockstore {
             next_merkle_root_meta.first_received_shred_index(),
             next_merkle_root_meta.first_received_shred_type(),
         );
-        let next_shred =
+        let Some(next_shred) =
             Self::get_shred_from_just_inserted_or_db(self, just_inserted_shreds, next_shred_id)
-                .expect("Shred indicated by merkle root meta must exist")
-                .into_owned();
+                .map(Cow::into_owned)
+        else {
+            error!(
+                "Shred {next_shred_id:?} indicated by merkle root meta {next_merkle_root_meta:?} is missing from blockstore.
+                 This should only happen in extreme cases where blockstore cleanup has caught up to the root.
+                 Skipping the forward chained merkle root consistency check"
+            );
+            return true;
+        };
         let merkle_root = shred.merkle_root().ok();
         let chained_merkle_root = shred::layout::get_chained_merkle_root(&next_shred);
 
@@ -1930,7 +1942,7 @@ impl Blockstore {
             return true;
         };
 
-        let prev_merkle_root_meta = merkle_root_metas
+        let Some(prev_merkle_root_meta) = merkle_root_metas
             .get(&prev_erasure_set)
             .map(WorkingEntry::as_ref)
             .map(Cow::Borrowed)
@@ -1939,16 +1951,30 @@ impl Blockstore {
                     .unwrap()
                     .map(Cow::Owned)
             })
-            .expect("merkle root meta must exist for erasure meta");
+        else {
+            warn!(
+                "The merkle root meta for the previous erasure set {prev_erasure_set:?} does not exist.
+                This should only happen if you have recently upgraded from a version < v1.18.13.
+                Skipping the backwards chained merkle root for {erasure_set:?}"
+            );
+            return true;
+        };
         let prev_shred_id = ShredId::new(
             slot,
             prev_merkle_root_meta.first_received_shred_index(),
             prev_merkle_root_meta.first_received_shred_type(),
         );
-        let prev_shred =
+        let Some(prev_shred) =
             Self::get_shred_from_just_inserted_or_db(self, just_inserted_shreds, prev_shred_id)
-                .expect("Shred indicated by merkle root meta must exist")
-                .into_owned();
+                .map(Cow::into_owned)
+        else {
+            error!(
+                "Shred {prev_shred_id:?} indicated by merkle root meta {prev_merkle_root_meta:?} is missing from blockstore.
+                 This should only happen in extreme cases where blockstore cleanup has caught up to the root.
+                 Skipping the backwards chained merkle root consistency check"
+            );
+            return true;
+        };
         let merkle_root = shred::layout::get_merkle_root(&prev_shred);
         let chained_merkle_root = shred.chained_merkle_root().ok();
 
@@ -2015,12 +2041,17 @@ impl Blockstore {
                     u32::try_from(last_index.unwrap()).unwrap(),
                     ShredType::Data,
                 );
-                let ending_shred: Vec<u8> = self
+                let Some(ending_shred) = self
                     .get_shred_from_just_inserted_or_db(just_inserted_shreds, shred_id)
-                    .unwrap_or_else(|| {
-                        panic!("Last index data shred indicated by slot meta {:?} is missing from blockstore. This inconsistency may cause duplicate block detection to fail", slot_meta)
-                    })
-                    .into_owned();
+                    .map(Cow::into_owned)
+                else {
+                    error!(
+                        "Last index data shred {shred_id:?} indiciated by slot meta {slot_meta:?} is missing from blockstore.
+                        This should only happen in extreme cases where blockstore cleanup has caught up to the root.
+                        Skipping data shred insertion"
+                    );
+                    return false;
+                };
 
                 if self
                     .store_duplicate_slot(slot, ending_shred.clone(), shred.payload().clone())
@@ -2058,12 +2089,17 @@ impl Blockstore {
                     u32::try_from(slot_meta.received - 1).unwrap(),
                     ShredType::Data,
                 );
-                let ending_shred: Vec<u8> = self
+                let Some(ending_shred) = self
                     .get_shred_from_just_inserted_or_db(just_inserted_shreds, shred_id)
-                    .unwrap_or_else(|| {
-                        panic!("Last received data shred indicated by slot meta {:?} is missing from blockstore. This inconsistency may cause duplicate block detection to fail", slot_meta)
-                    })
-                    .into_owned();
+                    .map(Cow::into_owned)
+                else {
+                    error!(
+                        "Last received data shred {shred_id:?} indiciated by slot meta {slot_meta:?} is missing from blockstore.
+                        This should only happen in extreme cases where blockstore cleanup has caught up to the root.
+                        Skipping data shred insertion"
+                    );
+                    return false;
+                };
 
                 if self
                     .store_duplicate_slot(slot, ending_shred.clone(), shred.payload().clone())
@@ -11640,5 +11676,109 @@ pub mod tests {
                 next_data_shred.into_payload(),
             )
         );
+    }
+
+    #[test]
+    fn test_chained_merkle_root_upgrade_inconsistency_backwards() {
+        // Insert a coding shred (without a merkle meta) then inconsistent shreds from the next FEC set
+        let ledger_path = get_tmp_ledger_path_auto_delete!();
+        let blockstore = Blockstore::open(ledger_path.path()).unwrap();
+
+        let parent_slot = 0;
+        let slot = 1;
+        let fec_set_index = 0;
+        let (data_shreds, coding_shreds, leader_schedule) =
+            setup_erasure_shreds_with_index(slot, parent_slot, 10, fec_set_index);
+        let coding_shred_previous = coding_shreds[0].clone();
+        let next_fec_set_index = fec_set_index + data_shreds.len() as u32;
+
+        assert!(blockstore
+            .insert_shred_return_duplicate(coding_shred_previous.clone(), &leader_schedule,)
+            .is_empty());
+
+        // Remove the merkle root meta in order to simulate this blockstore originating from
+        // an older version.
+        let mut write_batch = blockstore.db.batch().unwrap();
+        blockstore
+            .db
+            .delete_range_cf::<cf::MerkleRootMeta>(&mut write_batch, slot, slot)
+            .unwrap();
+        blockstore.db.write(write_batch).unwrap();
+        assert!(blockstore
+            .merkle_root_meta(coding_shred_previous.erasure_set())
+            .unwrap()
+            .is_none());
+
+        // Add an incorrectly chained merkle from the next set. Although incorrectly chained
+        // we skip the duplicate check as the merkle root meta is missing.
+        let merkle_root = Hash::new_unique();
+        assert!(merkle_root != coding_shred_previous.merkle_root().unwrap());
+        let (data_shreds, coding_shreds, leader_schedule) =
+            setup_erasure_shreds_with_index_and_chained_merkle(
+                slot,
+                parent_slot,
+                10,
+                next_fec_set_index,
+                Some(merkle_root),
+            );
+        let data_shred = data_shreds[0].clone();
+        let coding_shred = coding_shreds[0].clone();
+        assert!(blockstore
+            .insert_shred_return_duplicate(coding_shred, &leader_schedule)
+            .is_empty());
+        assert!(blockstore
+            .insert_shred_return_duplicate(data_shred, &leader_schedule,)
+            .is_empty());
+    }
+
+    #[test]
+    fn test_chained_merkle_root_upgrade_inconsistency_forwards() {
+        // Insert a data shred (without a merkle root), then an inconsistent coding shred from the previous FEC set.
+        let ledger_path = get_tmp_ledger_path_auto_delete!();
+        let blockstore = Blockstore::open(ledger_path.path()).unwrap();
+
+        let parent_slot = 0;
+        let slot = 1;
+        let fec_set_index = 0;
+        let (data_shreds, coding_shreds, leader_schedule) =
+            setup_erasure_shreds_with_index(slot, parent_slot, 10, fec_set_index);
+        let coding_shred = coding_shreds[0].clone();
+        let next_fec_set_index = fec_set_index + data_shreds.len() as u32;
+
+        // Incorrectly chained merkle
+        let merkle_root = Hash::new_unique();
+        assert!(merkle_root != coding_shred.merkle_root().unwrap());
+        let (next_data_shreds, next_coding_shreds, leader_schedule_next) =
+            setup_erasure_shreds_with_index_and_chained_merkle(
+                slot,
+                parent_slot,
+                10,
+                next_fec_set_index,
+                Some(merkle_root),
+            );
+        let next_data_shred = next_data_shreds[0].clone();
+
+        assert!(blockstore
+            .insert_shred_return_duplicate(next_data_shred, &leader_schedule_next,)
+            .is_empty());
+
+        // Remove the merkle root meta in order to simulate this blockstore originating from
+        // an older version.
+        let mut write_batch = blockstore.db.batch().unwrap();
+        blockstore
+            .db
+            .delete_range_cf::<cf::MerkleRootMeta>(&mut write_batch, slot, slot)
+            .unwrap();
+        blockstore.db.write(write_batch).unwrap();
+        assert!(blockstore
+            .merkle_root_meta(next_coding_shreds[0].erasure_set())
+            .unwrap()
+            .is_none());
+
+        // Insert previous FEC set, although incorrectly chained we skip the duplicate check
+        // as the merkle root meta is missing.
+        assert!(blockstore
+            .insert_shred_return_duplicate(coding_shred, &leader_schedule)
+            .is_empty());
     }
 }

@@ -160,7 +160,7 @@ fn do_verify_reachable_ports(
             }
             Err(err) => {
                 error!(
-                    " tcp/{}, check your port configuration: {}",
+                    "Received no response at tcp/{}, check your port configuration: {}",
                     port, err
                 );
                 // Ugh, std rustc doesn't provide accepting with timeout or restoring original

@@ -519,7 +519,7 @@ impl JsonRpcRequestProcessor {
         })
     }
 
-    // Yusuf -  added this function get_wallet_count
+    // Sonic -  added this function get_wallet_count
     pub fn get_wallet_count(
         &self,
         program_id: &Pubkey,
@@ -622,6 +622,20 @@ impl JsonRpcRequestProcessor {
             .into());
         };
 
+        // If there is a gap in blockstore or long-term historical storage that
+        // includes the epoch boundary, the `get_blocks_with_limit()` call above
+        // will return the slot of the block at the end of that gap, not a
+        // legitimate epoch-boundary block. Therefore, verify that the parent of
+        // `epoch_boundary_block` occurred before the `first_slot_in_epoch`. If
+        // it didn't, return an error; it will be impossible to locate
+        // rewards properly.
+        if first_confirmed_block.parent_slot >= first_slot_in_epoch {
+            return Err(RpcCustomError::SlotNotEpochBoundary {
+                slot: first_confirmed_block_in_epoch,
+            }
+            .into());
+        }
+
         let addresses: Vec<String> = addresses
             .into_iter()
             .map(|pubkey| pubkey.to_string())
@@ -683,6 +697,7 @@ impl JsonRpcRequestProcessor {
         // Since epoch schedule data comes from the genesis config, any commitment level should be
         // fine
         let bank = self.bank(Some(CommitmentConfig::finalized()));
+        #[allow(clippy::clone_on_copy)]
         bank.epoch_schedule().clone()
     }
 
@@ -3139,7 +3154,7 @@ pub mod rpc_accounts_scan {
             config: Option<RpcProgramAccountsConfig>,
         ) -> Result<OptionalContext<Vec<RpcKeyedAccount>>>;
 
-        // Yusuf - Added getWalletCount
+        // Sonic - Added getWalletCount
         #[rpc(meta, name = "getWalletCount")]
         fn get_wallet_count(
             &self,
@@ -3228,7 +3243,7 @@ pub mod rpc_accounts_scan {
             meta.get_program_accounts(&program_id, config, filters, with_context)
         }
 
-        // Yusuf -  Added get_wallet_count
+        // Sonic -  Added get_wallet_count
         fn get_wallet_count(
             &self,
             meta: Self::Metadata,
@@ -3544,12 +3559,32 @@ pub mod rpc_full {
                         Some(RpcContactInfo {
                             pubkey: contact_info.pubkey().to_string(),
                             gossip: contact_info.gossip().ok(),
+                            tvu: contact_info
+                                .tvu(Protocol::UDP)
+                                .ok()
+                                .filter(|addr| socket_addr_space.check(addr)),
                             tpu: contact_info
                                 .tpu(Protocol::UDP)
                                 .ok()
                                 .filter(|addr| socket_addr_space.check(addr)),
                             tpu_quic: contact_info
                                 .tpu(Protocol::QUIC)
+                                .ok()
+                                .filter(|addr| socket_addr_space.check(addr)),
+                            tpu_forwards: contact_info
+                                .tpu_forwards(Protocol::UDP)
+                                .ok()
+                                .filter(|addr| socket_addr_space.check(addr)),
+                            tpu_forwards_quic: contact_info
+                                .tpu_forwards(Protocol::QUIC)
+                                .ok()
+                                .filter(|addr| socket_addr_space.check(addr)),
+                            tpu_vote: contact_info
+                                .tpu_vote()
+                                .ok()
+                                .filter(|addr| socket_addr_space.check(addr)),
+                            serve_repair: contact_info
+                                .serve_repair(Protocol::UDP)
                                 .ok()
                                 .filter(|addr| socket_addr_space.check(addr)),
                             rpc: contact_info
@@ -5276,8 +5311,13 @@ pub mod tests {
             "pubkey": rpc.identity.to_string(),
             "gossip": "127.0.0.1:8000",
             "shredVersion": 0u16,
+            "tvu": "127.0.0.1:8001",
             "tpu": "127.0.0.1:8003",
             "tpuQuic": "127.0.0.1:8009",
+            "tpuForwards": "127.0.0.1:8004",
+            "tpuForwardsQuic": "127.0.0.1:8010",
+            "tpuVote": "127.0.0.1:8005",
+            "serveRepair": "127.0.0.1:8008",
             "rpc": format!("127.0.0.1:{}", rpc_port::DEFAULT_RPC_PORT),
             "pubsub": format!("127.0.0.1:{}", rpc_port::DEFAULT_RPC_PUBSUB_PORT),
             "version": null,
@@ -5286,8 +5326,13 @@ pub mod tests {
             "pubkey": rpc.leader_pubkey().to_string(),
             "gossip": "127.0.0.1:1235",
             "shredVersion": 0u16,
+            "tvu": "127.0.0.1:1236",
             "tpu": "127.0.0.1:1234",
             "tpuQuic": "127.0.0.1:1240",
+            "tpuForwards": "127.0.0.1:1239",
+            "tpuForwardsQuic": "127.0.0.1:1245",
+            "tpuVote": "127.0.0.1:1241",
+            "serveRepair": "127.0.0.1:1242",
             "rpc": format!("127.0.0.1:{}", rpc_port::DEFAULT_RPC_PORT),
             "pubsub": format!("127.0.0.1:{}", rpc_port::DEFAULT_RPC_PUBSUB_PORT),
             "version": null,

@@ -687,12 +687,13 @@ pub struct Bank {
     /// slots to hard fork at
     hard_forks: Arc<RwLock<HardForks>>,
 
-    /// The number of transactions processed without error
+    /// The number of committed transactions since genesis.
     transaction_count: AtomicU64,
 
-    /// The number of non-vote transactions processed without error since the most recent boot from
-    /// snapshot or genesis. This value is not shared though the network, nor retained within
-    /// snapshots, but is preserved in `Bank::new_from_parent`.
+    /// The number of non-vote transactions committed since the most
+    /// recent boot from snapshot or genesis. This value is only stored in
+    /// blockstore for the RPC method "getPerformanceSamples". It is not
+    /// retained within snapshots, but is preserved in `Bank::new_from_parent`.
     non_vote_transaction_count_since_restart: AtomicU64,
 
     /// The number of transaction errors in this slot
@@ -1211,6 +1212,7 @@ impl Bank {
         parent.freeze();
         assert_ne!(slot, parent.slot());
 
+        #[allow(clippy::clone_on_copy)]
         let epoch_schedule = parent.epoch_schedule().clone();
         let epoch = epoch_schedule.get_epoch(slot);
 
@@ -1919,6 +1921,7 @@ impl Bank {
             fee_rate_governor: self.fee_rate_governor.clone(),
             collected_rent: self.collected_rent.load(Relaxed),
             rent_collector: self.rent_collector.clone(),
+            #[allow(clippy::clone_on_copy)]
             epoch_schedule: self.epoch_schedule.clone(),
             inflation: *self.inflation.read().unwrap(),
             stakes: &self.stakes_cache,
@@ -3747,6 +3750,7 @@ impl Bank {
         self.parent_hash
     }
 
+    #[allow(clippy::clone_on_copy)]
     fn process_genesis_config(
         &mut self,
         genesis_config: &GenesisConfig,
@@ -4727,21 +4731,6 @@ impl Bank {
 
         let mut timings = ExecuteDetailsTimings::default();
         load_program_metrics.submit_datapoint(&mut timings);
-        if !Arc::ptr_eq(
-            &environments.program_runtime_v1,
-            &loaded_programs_cache.environments.program_runtime_v1,
-        ) || !Arc::ptr_eq(
-            &environments.program_runtime_v2,
-            &loaded_programs_cache.environments.program_runtime_v2,
-        ) {
-            // There can be two entries per program when the environment changes.
-            // One for the old environment before the epoch boundary and one for the new environment after the epoch boundary.
-            // These two entries have the same deployment slot, so they must differ in their effective slot instead.
-            // This is done by setting the effective slot of the entry for the new environment to the epoch boundary.
-            loaded_program.effective_slot = loaded_program
-                .effective_slot
-                .max(self.epoch_schedule.get_first_slot_in_epoch(effective_epoch));
-        }
         if let Some(recompile) = recompile {
             loaded_program.tx_usage_counter =
                 AtomicU64::new(recompile.tx_usage_counter.load(Ordering::Relaxed));
@@ -4795,6 +4784,7 @@ impl Bank {
 
         let mut transaction_context = TransactionContext::new(
             transaction_accounts,
+            #[allow(clippy::clone_on_copy)]
             self.rent_collector.rent.clone(),
             compute_budget.max_invoke_stack_height,
             compute_budget.max_instruction_trace_length,
@@ -5158,6 +5148,7 @@ impl Bank {
         ));
 
         if programs_loaded_for_tx_batch.borrow().hit_max_limit {
+            error!("Discarding TX batch {:#?}", batch.sanitized_transactions());
             return LoadAndExecuteTransactionsOutput {
                 loaded_transactions: vec![],
                 execution_results: vec![],
@@ -5360,13 +5351,14 @@ impl Bank {
                 // replay could occur
                 signature_count += u64::from(tx.message().header().num_required_signatures);
                 executed_transactions_count += 1;
+
+                if !is_vote {
+                    executed_non_vote_transactions_count += 1;
+                }
             }
 
             match execution_result.flattened_result() {
                 Ok(()) => {
-                    if !is_vote {
-                        executed_non_vote_transactions_count += 1;
-                    }
                     executed_with_successful_result_count += 1;
                 }
                 Err(err) => {
@@ -7088,6 +7080,7 @@ impl Bank {
         if config.run_in_background {
             let ancestors = ancestors.clone();
             let accounts = Arc::clone(accounts);
+            #[allow(clippy::clone_on_copy)]
             let epoch_schedule = epoch_schedule.clone();
             let rent_collector = rent_collector.clone();
             let accounts_ = Arc::clone(&accounts);
